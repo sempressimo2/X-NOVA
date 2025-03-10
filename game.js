@@ -47,6 +47,99 @@ function initGrid() {
     updateStatus();
 }
 
+function showGameMessage(message, duration = 2000) {
+    // Create or get message container
+    let msgContainer = document.getElementById('game-messages');
+    if (!msgContainer) {
+        msgContainer = document.createElement('div');
+        msgContainer.id = 'game-messages';
+        document.body.appendChild(msgContainer);
+    }
+    
+    // Create message element
+    const msgElement = document.createElement('div');
+    msgElement.classList.add('game-message');
+    msgElement.textContent = message;
+    msgContainer.appendChild(msgElement);
+    
+    // Remove after duration
+    setTimeout(() => {
+        msgElement.classList.add('fade-out');
+        setTimeout(() => {
+            msgElement.remove();
+        }, 500);
+    }, duration);
+}
+
+function animateShot(fromX, fromY, toX, toY, hit) {
+    // Create the bullet element
+    const bullet = document.createElement('div');
+    bullet.classList.add('bullet');
+    document.body.appendChild(bullet); // Append to body instead of game container
+    
+    // Get grid position for more accurate coordinates
+    const grid = document.getElementById('grid');
+    const gridRect = grid.getBoundingClientRect();
+    const cellSize = 50; // Based on your CSS
+    const cellGap = 2; // Based on your CSS
+    
+    // Calculate starting position (center of source cell)
+    const startX = gridRect.left + (fromX * (cellSize + cellGap)) + (cellSize / 2);
+    const startY = gridRect.top + (fromY * (cellSize + cellGap)) + (cellSize / 2);
+    
+    // Calculate ending position (center of target cell)
+    const endX = gridRect.left + (toX * (cellSize + cellGap)) + (cellSize / 2);
+    const endY = gridRect.top + (toY * (cellSize + cellGap)) + (cellSize / 2);
+    
+    // Set initial position
+    bullet.style.left = `${startX}px`;
+    bullet.style.top = `${startY}px`;
+    
+    // Make sure bullet is visible for debugging
+    console.log(`Bullet created at ${startX},${startY} heading to ${endX},${endY}`);
+    
+    // Animate the bullet
+    const duration = 800; // Increased duration to see it better
+    const startTime = performance.now();
+    
+    function animate(currentTime) {
+        const elapsedTime = currentTime - startTime;
+        const progress = Math.min(elapsedTime / duration, 1);
+        
+        const currentX = startX + (endX - startX) * progress;
+        const currentY = startY + (endY - startY) * progress;
+        
+        bullet.style.left = `${currentX}px`;
+        bullet.style.top = `${currentY}px`;
+        
+        if (progress < 1) {
+            requestAnimationFrame(animate);
+        } else {
+            // Animation complete
+            if (hit) {
+                // Add hit effect
+                const hitEffect = document.createElement('div');
+                hitEffect.classList.add('hit-effect');
+                hitEffect.style.left = `${endX}px`;
+                hitEffect.style.top = `${endY}px`;
+                document.body.appendChild(hitEffect);
+                
+                // Remove hit effect after animation
+                setTimeout(() => {
+                    hitEffect.remove();
+                }, 500);
+            }
+            
+            // Remove bullet after animation
+            setTimeout(() => {
+                bullet.remove();
+            }, 200);
+        }
+    }
+    
+    requestAnimationFrame(animate);
+}
+
 // Render obstacles on the grid
 function renderObstacles() {
     gameState.obstacles.forEach(obstacle => {
@@ -213,19 +306,28 @@ function handleShoot() {
         const finalHitChance = Math.max(5, baseHitChance + hitChanceModifier);
         
         // Display info about the shot
-        alert(`Attempting shot: ${finalHitChance}% chance to hit`);
+        showGameMessage(`Attempting shot: ${finalHitChance}% chance to hit`);
         
         const hit = Math.random() * 100 < finalHitChance;
         
+        // Animate the shot
+        animateShot(
+            gameState.selectedUnit.x, 
+            gameState.selectedUnit.y, 
+            closestAlien.x, 
+            closestAlien.y,
+            hit
+        );
+        
         if (hit) {
             closestAlien.health--;
-            alert(`Hit! Alien at (${closestAlien.x}, ${closestAlien.y}) took damage!`);
+            showGameMessage(`Hit! Alien at (${closestAlien.x}, ${closestAlien.y}) took damage!`);
             
             if (closestAlien.health <= 0) {
-                alert('Alien eliminated!');
+                showGameMessage('Alien eliminated!');
             }
         } else {
-            alert('Shot missed!');
+            showGameMessage('Shot missed!');
         }
         
         gameState.actionPoints -= 2;
@@ -234,10 +336,10 @@ function handleShoot() {
         
         // Check win condition
         if (gameState.aliens.every(a => a.health <= 0)) {
-            alert('Victory! All aliens eliminated!');
+            showGameMessage('Victory! All aliens eliminated!');
         }
     } else {
-        alert('No aliens in sight!');
+        showGameMessage('No aliens in sight!');
     }
 }
 
