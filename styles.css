@@ -1,0 +1,111 @@
+body {
+    font-family: 'Courier New', monospace;
+    background-color: #111;
+    color: #0f0;
+    text-align: center;
+}
+
+#game-container {
+    margin: 20px auto;
+    width: 600px;
+}
+
+#grid {
+    display: grid;
+    grid-template-columns: repeat(10, 50px);
+    grid-template-rows: repeat(10, 50px);
+    gap: 2px;
+    margin: 0 auto;
+}
+
+.cell {
+    background-color: #222;
+    border: 1px solid #444;
+    position: relative;
+}
+
+.cell:hover {
+    background-color: #333;
+    cursor: pointer;
+}
+
+.soldier {
+    background-color: blue;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    position: absolute;
+    top: 10px;
+    left: 10px;
+}
+
+.alien {
+    background-color: red;
+    width: 30px;
+    height: 30px;
+    position: absolute;
+    top: 10px;
+    left: 10px;
+}
+
+.selected {
+    box-shadow: 0 0 10px #0f0;
+}
+
+.path {
+    background-color: rgba(0, 255, 0, 0.3);
+}
+
+#status {
+    margin: 20px;
+    padding: 10px;
+    background-color: #222;
+    border: 1px solid #444;
+}
+
+button {
+    background-color: #222;
+    color: #0f0;
+    border: 1px solid #0f0;
+    padding: 5px 10px;
+    margin: 5px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #333;
+}
+
+/* Cover system styles */
+.obstacle {
+    background-color: #555;
+    position: relative;
+}
+
+.half-cover {
+    background-color: #333;
+    position: relative;
+}
+
+.half-cover::after {
+    content: "½";
+    position: absolute;
+    color: #777;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.full-cover {
+    background-color: #666;
+    position: relative;
+}
+
+.full-cover::after {
+    content: "■";
+    position: absolute;
+    color: #999;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
