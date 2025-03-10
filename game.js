@@ -26,6 +26,9 @@ const gameState = {
     ]
 };
 
+// New global variables to track targeting mode
+let targetingMode = false;
+
 // Initialize the grid
 function initGrid() {
     const grid = document.getElementById('grid');
@@ -190,6 +193,19 @@ function handleCellClick(e) {
     // Clear any previous path indicators
     document.querySelectorAll('.path').forEach(cell => cell.classList.remove('path'));
     
+    // If in targeting mode, check if clicked on an alien
+    if (targetingMode) {
+        const targetAlien = gameState.aliens.find(a => a.x === x && a.y === y && a.health > 0);
+        
+        if (targetAlien) {
+            handleTargetSelection(targetAlien);
+        } else {
+            // Clicked elsewhere while targeting, cancel targeting
+            exitTargetingMode();
+        }
+        return;
+    }
+    
     if (gameState.turn === 'player') {
         // Check if there's a soldier at this position
         const soldier = gameState.soldiers.find(s => s.x === x && s.y === y && s.health > 0);
@@ -264,88 +280,161 @@ function getTargetCoverStatus(shooterX, shooterY, targetX, targetY) {
     return coverFound;
 }
 
-// Handle shooting
+// Handle shooting - modified to enter targeting mode
 function handleShoot() {
     if (gameState.turn !== 'player' || !gameState.selectedUnit || gameState.actionPoints < 2) {
         return;
     }
     
-    // Find the closest alien
-    let closestAlien = null;
-    let shortestDistance = Infinity;
+    // Enter targeting mode
+    targetingMode = true;
+    showGameMessage("Select an enemy to target");
     
+    // Highlight targetable aliens
     gameState.aliens.forEach(alien => {
-        if (alien.health <= 0) return;
-        
-        const distance = Math.abs(alien.x - gameState.selectedUnit.x) + 
-                        Math.abs(alien.y - gameState.selectedUnit.y);
-        
-        if (distance < shortestDistance) {
-            shortestDistance = distance;
-            closestAlien = alien;
+        if (alien.health > 0) {
+            const cell = getCellAt(alien.x, alien.y);
+            cell.classList.add('targetable');
         }
     });
+}
+
+// Add a function to handle target selection
+function handleTargetSelection(alien) {
+    if (!targetingMode) return;
     
-    if (closestAlien) {
-        // Check if alien is in cover
-        const coverStatus = getTargetCoverStatus(
-            gameState.selectedUnit.x, gameState.selectedUnit.y,
-            closestAlien.x, closestAlien.y
-        );
+    // Calculate hit chance
+    const distance = Math.abs(alien.x - gameState.selectedUnit.x) + 
+                    Math.abs(alien.y - gameState.selectedUnit.y);
+    
+    // Check cover status
+    const coverStatus = getTargetCoverStatus(
+        gameState.selectedUnit.x, gameState.selectedUnit.y,
+        alien.x, alien.y
+    );
+    
+    // Calculate hit chance
+    let hitChanceModifier = 0;
+    if (coverStatus === 'half-cover') {
+        hitChanceModifier = -30; // -30% hit chance for half cover
+    } else if (coverStatus === 'full-cover') {
+        hitChanceModifier = -60; // -60% hit chance for full cover
+    }
+    
+    // Base hit chance calculation
+    const baseHitChance = Math.max(10, 90 - distance * 10);
+    const finalHitChance = Math.max(5, baseHitChance + hitChanceModifier);
+    
+    // Show targeting dialog
+    showTargetingDialog(alien, finalHitChance);
+}
+
+// Create a targeting dialog
+function showTargetingDialog(alien, hitChance) {
+    // Remove any existing dialog
+    const existingDialog = document.getElementById('targeting-dialog');
+    if (existingDialog) {
+        existingDialog.remove();
+    }
+    
+    // Create dialog
+    const dialog = document.createElement('div');
+    dialog.id = 'targeting-dialog';
+    dialog.classList.add('targeting-dialog');
+    
+    // Add content
+    dialog.innerHTML = `
+        <div class="dialog-content">
+            <h3>Target: Alien at (${alien.x}, ${alien.y})</h3>
+            <p>Shot Accuracy: <span class="accuracy">${Math.round(hitChance)}%</span></p>
+            <div class="dialog-buttons">
+                <button id="confirm-shot">Shoot (2 AP)</button>
+                <button id="cancel-shot">Cancel</button>
+            </div>
+        </div>
+    `;
+    
+    // Position dialog near the target
+    const targetCell = getCellAt(alien.x, alien.y);
+    const targetRect = targetCell.getBoundingClientRect();
+    const gridRect = document.getElementById('grid').getBoundingClientRect();
+    
+    dialog.style.position = 'absolute';
+    dialog.style.top = `${targetRect.top - 10}px`;
+    dialog.style.left = `${targetRect.right + 10}px`;
+    
+    // Add to document
+    document.body.appendChild(dialog);
+    
+    // Add event listeners
+    document.getElementById('confirm-shot').addEventListener('click', () => {
+        executeShot(alien, hitChance);
+        dialog.remove();
+    });
+    
+    document.getElementById('cancel-shot').addEventListener('click', () => {
+        exitTargetingMode();
+        dialog.remove();
+    });
+}
+
+// Execute the shot after confirmation
+function executeShot(alien, hitChance) {
+    // Determine if shot hits
+    const hit = Math.random() * 100 < hitChance;
+    
+    // Animate the shot
+    animateShot(
+        gameState.selectedUnit.x, 
+        gameState.selectedUnit.y, 
+        alien.x, 
+        alien.y,
+        hit
+    );
+    
+    if (hit) {
+        alien.health--;
+        showGameMessage(`Hit! Alien at (${alien.x}, ${alien.y}) took damage!`);
         
-        // Adjust hit chance based on cover
-        let hitChanceModifier = 0;
-        if (coverStatus === 'half-cover') {
-            hitChanceModifier = -30; // -30% hit chance for half cover
-        } else if (coverStatus === 'full-cover') {
-            hitChanceModifier = -60; // -60% hit chance for full cover
-        }
-        
-        // Base hit chance calculation - closer is better
-        const baseHitChance = Math.max(10, 90 - shortestDistance * 10);
-        const finalHitChance = Math.max(5, baseHitChance + hitChanceModifier);
-        
-        // Display info about the shot
-        showGameMessage(`Attempting shot: ${finalHitChance}% chance to hit`);
-        
-        const hit = Math.random() * 100 < finalHitChance;
-        
-        // Animate the shot
-        animateShot(
-            gameState.selectedUnit.x, 
-            gameState.selectedUnit.y, 
-            closestAlien.x, 
-            closestAlien.y,
-            hit
-        );
-        
-        if (hit) {
-            closestAlien.health--;
-            showGameMessage(`Hit! Alien at (${closestAlien.x}, ${closestAlien.y}) took damage!`);
-            
-            if (closestAlien.health <= 0) {
-                showGameMessage('Alien eliminated!');
-            }
-        } else {
-            showGameMessage('Shot missed!');
-        }
-        
-        gameState.actionPoints -= 2;
-        updateStatus();
-        renderUnits();
-        
-        // Check win condition
-        if (gameState.aliens.every(a => a.health <= 0)) {
-            showGameMessage('Victory! All aliens eliminated!');
+        if (alien.health <= 0) {
+            showGameMessage('Alien eliminated!');
         }
     } else {
-        showGameMessage('No aliens in sight!');
+        showGameMessage('Shot missed!');
     }
+    
+    // Deduct action points
+    gameState.actionPoints -= 2;
+    updateStatus();
+    renderUnits();
+    
+    // Exit targeting mode
+    exitTargetingMode();
+    
+    // Check win condition
+    if (gameState.aliens.every(a => a.health <= 0)) {
+        showGameMessage('Victory! All aliens eliminated!');
+    }
+}
+
+// Exit targeting mode
+function exitTargetingMode() {
+    targetingMode = false;
+    
+    // Remove targeting highlights
+    document.querySelectorAll('.targetable').forEach(el => {
+        el.classList.remove('targetable');
+    });
 }
 
 // End player turn and start alien turn
 function endTurn() {
     if (gameState.turn === 'player') {
+        // Exit targeting mode if active
+        if (targetingMode) {
+            exitTargetingMode();
+        }
+        
         gameState.turn = 'alien';
         document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
         gameState.selectedUnit = null;
