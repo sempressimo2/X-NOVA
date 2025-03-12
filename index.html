@@ -2,21 +2,1272 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>X-NOVA Mini</title>
-    <link rel="stylesheet" href="styles.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bank Robber - WebGL Edition</title>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: #1a1a1a;
+            color: #f0f0f0;
+            touch-action: manipulation;
+            background-image: linear-gradient(to bottom, #2c3e50, #1a1a1a);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .game-wrapper {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+        }
+        
+		.aspect-ratio-container {
+			width: 100%;
+			max-width: 100%;  /* Remove the height restriction */
+			height: auto;
+			aspect-ratio: 16/9;  /* Force 16:9 aspect ratio */
+			position: relative;
+			display: flex;
+			flex-direction: column;
+		}
+        
+        h1 {
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
+            color: #ffd700;
+            font-size: 1.8rem;
+            text-align: center;
+            margin-bottom: 5px;
+            flex: 0 0 auto;
+        }
+        
+        #level {
+            font-size: 1.2rem;
+            text-align: center;
+            color: #ffd700;
+            text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+            flex: 0 0 auto;
+        }
+        
+        .difficulty-display {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            justify-content: center;
+            flex: 0 0 auto;
+            color: #f39c12;
+            font-size: 0.9rem;
+        }
+        
+        #game-container {
+            background-color: #2c3e50;
+            border: 8px solid #34495e;
+            border-radius: 15px;
+            padding: 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
+			aspect-ratio: 16/9;
+			width: 100%;
+        }
+        
+        #game-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 20px;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.1), transparent);
+            pointer-events: none;
+        }
+        
+        #webgl-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        
+        .score-display {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            font-size: 0.9rem;
+            color: #f39c12;
+            z-index: 10;
+        }
+        
+        #controls {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 10px;
+            flex: 0 0 auto;
+        }
+        
+        button {
+            padding: 10px;
+            background: linear-gradient(to bottom, #3498db, #2980b9);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: all 0.2s;
+        }
+        
+        button:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 3px rgba(0, 0, 0, 0.3);
+        }
+        
+        .victory-overlay, .game-over-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s;
+        }
+        
+        .victory-overlay.active, .game-over-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        .victory-text, .game-over-text {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
+        }
+        
+        .victory-text {
+            color: #ffd700;
+        }
+        
+        .game-over-text {
+            color: #e74c3c;
+        }
+        
+        .next-button, .retry-button {
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        
+        .next-button {
+            background: linear-gradient(to bottom, #f1c40f, #f39c12);
+            color: #34495e;
+        }
+        
+        .retry-button {
+            background: linear-gradient(to bottom, #e74c3c, #c0392b);
+            color: white;
+        }
+        
+		@media (max-aspect-ratio: 16/9) {
+			.aspect-ratio-container {
+				width: 100%;
+				height: auto;
+			}
+		}
+
+		@media (min-aspect-ratio: 16/9) {
+			.aspect-ratio-container {
+				height: 100%;
+				width: auto;
+			}
+		}
+    </style>
 </head>
 <body>
-    <h1>X-NOVA - Humans vs Aliens</h1>
-    <div id="game-container">
-        <div id="status">Turn: Player | Action Points: 4</div>
-        <div id="grid"></div>
-        <div id="controls">
-            <button id="end-turn">End Turn</button>
-            <button id="shoot">Shoot (2 AP)</button>
+    <div class="game-wrapper">
+        <div class="aspect-ratio-container">
+            <h1>Bank Robber</h1>
+            <div id="level">Level 1</div>
+            
+            <div class="difficulty-display">
+                <span>Police: <span id="police-count">1</span></span>
+                <span>Walls: <span id="wall-percentage">20%</span></span>
+            </div>
+            
+            <div id="game-container">
+                <div class="score-display">Moves: <span id="moves-counter">0</span></div>
+                <canvas id="webgl-canvas"></canvas>
+            </div>
+            
+            <div id="controls">
+                <button id="reset"><i class="fas fa-undo"></i> Reset</button>
+                <button id="new-level"><i class="fas fa-random"></i> New Level</button>
+            </div>
         </div>
     </div>
+    
+    <div class="victory-overlay" id="victory-screen">
+        <div class="victory-text">Level Complete!</div>
+        <div class="next-button" id="continue-button">Next Level <i class="fas fa-arrow-right"></i></div>
+    </div>
+    
+    <div class="game-over-overlay" id="game-over-screen">
+        <div class="game-over-text">You Got Caught!</div>
+        <div class="retry-button" id="retry-button">Try Again <i class="fas fa-redo"></i></div>
+    </div>
 
-    <script type="module" src="main.js"></script>
+    <!-- WebGL Shader Scripts -->
+    <script id="vertex-shader" type="x-shader/x-vertex">
+        attribute vec4 aVertexPosition;
+        attribute vec2 aTextureCoord;
+        
+        uniform mat4 uModelViewMatrix;
+        uniform mat4 uProjectionMatrix;
+        
+        varying highp vec2 vTextureCoord;
+        
+        void main() {
+            gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+            vTextureCoord = aTextureCoord;
+        }
+    </script>
+    
+    <script id="fragment-shader" type="x-shader/x-fragment">
+        precision mediump float;
+        
+        varying highp vec2 vTextureCoord;
+        
+        uniform sampler2D uSampler;
+        uniform bool uUseTexture;
+        uniform vec4 uColor;
+        
+        void main() {
+            if (uUseTexture) {
+                gl_FragColor = texture2D(uSampler, vTextureCoord);
+            } else {
+                gl_FragColor = uColor;
+            }
+        }
+    </script>
+
+    <script>
+        // Game configuration
+        const GRID_WIDTH = 15;
+        const GRID_HEIGHT = 8;
+        let currentLevel = 1;
+        let playerPos = { x: 0, y: 0 };
+        let policePositions = [{ x: 4, y: 0 }]; // Now an array
+        let safePos = { x: 4, y: 7 };
+        let walls = [];
+        let moves = 0;
+        let gameActive = true;
+        
+        // Progression constants
+        const MAX_WALL_PERCENTAGE = 50; // Maximum percentage of grid cells that can have walls
+        const BASE_WALL_PERCENTAGE = 20; // Starting percentage
+        const WALL_INCREMENT = 5; // Add this percentage every 5 levels
+        const MAX_POLICE = 3; // Maximum number of police officers
+        
+        // WebGL variables
+        let gl;
+        let programInfo;
+        let buffers;
+        let textures = {};
+        let lastRenderTime = 0;
+        let squareRotation = 0;
+        
+        // DOM elements
+        const canvas = document.getElementById('webgl-canvas');
+        const levelDisplay = document.getElementById('level');
+        const resetButton = document.getElementById('reset');
+        const newLevelButton = document.getElementById('new-level');
+        const movesCounter = document.getElementById('moves-counter');
+        const victoryScreen = document.getElementById('victory-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const continueButton = document.getElementById('continue-button');
+        const retryButton = document.getElementById('retry-button');
+        const policeCountDisplay = document.getElementById('police-count');
+        const wallPercentageDisplay = document.getElementById('wall-percentage');
+        
+        // Initialize the game
+        function initGame() {
+            // Init WebGL
+            initWebGL();
+            
+            generateRandomLevel();
+            
+            // Event listeners
+            resetButton.addEventListener('click', () => {
+                resetLevel();
+            });
+            
+            newLevelButton.addEventListener('click', () => {
+                currentLevel++;
+                generateRandomLevel();
+            });
+            
+            continueButton.addEventListener('click', () => {
+                victoryScreen.classList.remove('active');
+                currentLevel++;
+                generateRandomLevel();
+            });
+            
+            retryButton.addEventListener('click', () => {
+                gameOverScreen.classList.remove('active');
+                resetLevel();
+            });
+            
+            // Add click event to canvas
+            canvas.addEventListener('click', handleCanvasClick);
+            
+            // Start the render loop
+            requestAnimationFrame(render);
+        }
+        
+        // Initialize WebGL
+        function initWebGL() {
+            gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            
+            if (!gl) {
+                alert('Unable to initialize WebGL. Your browser may not support it.');
+                return;
+            }
+            
+            // Initialize a shader program
+            const shaderProgram = initShaderProgram(gl, 
+                document.getElementById('vertex-shader').textContent,
+                document.getElementById('fragment-shader').textContent);
+            
+            // Collect all the info needed to use the shader program
+            programInfo = {
+                program: shaderProgram,
+                attribLocations: {
+                    vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
+                    textureCoord: gl.getAttribLocation(shaderProgram, 'aTextureCoord'),
+                },
+                uniformLocations: {
+                    projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
+                    modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+                    uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
+                    uUseTexture: gl.getUniformLocation(shaderProgram, 'uUseTexture'),
+                    uColor: gl.getUniformLocation(shaderProgram, 'uColor'),
+                },
+            };
+            
+            // Create buffers for shapes
+            buffers = initBuffers(gl);
+            
+            // Load textures
+            loadTextures();
+        }
+        
+        // Create shader program from source
+        function initShaderProgram(gl, vsSource, fsSource) {
+            const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
+            const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+            
+            // Create the shader program
+            const shaderProgram = gl.createProgram();
+            gl.attachShader(shaderProgram, vertexShader);
+            gl.attachShader(shaderProgram, fragmentShader);
+            gl.linkProgram(shaderProgram);
+            
+            // Alert if it fails
+            if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+                alert('Unable to initialize the shader program: ' + gl.getProgramInfoLog(shaderProgram));
+                return null;
+            }
+            
+            return shaderProgram;
+        }
+        
+        // Load a shader
+        function loadShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            
+            // Check if compilation was successful
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                alert('An error occurred compiling the shaders: ' + gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+            
+            return shader;
+        }
+        
+        // Initialize buffers for shapes
+        function initBuffers(gl) {
+            // Create buffer for square positions
+            const positionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            
+            // Define square positions
+            const positions = [
+                -1.0,  1.0,  // Top left
+                 1.0,  1.0,  // Top right
+                -1.0, -1.0,  // Bottom left
+                 1.0, -1.0,  // Bottom right
+            ];
+            
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+            
+            // Create buffer for texture coordinates
+            const textureCoordBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
+            
+            const textureCoordinates = [
+                0.0, 0.0,  // Top left
+                1.0, 0.0,  // Top right
+                0.0, 1.0,  // Bottom left
+                1.0, 1.0,  // Bottom right
+            ];
+            
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_DRAW);
+            
+            return {
+                position: positionBuffer,
+                textureCoord: textureCoordBuffer,
+            };
+        }
+        
+        // Load textures for game elements
+        function loadTextures() {
+            // Create texture placeholders first
+            const textureNames = ['cell', 'robber', 'police', 'safe', 'wall-h', 'wall-v'];
+            
+            textureNames.forEach(name => {
+                textures[name] = gl.createTexture();
+                gl.bindTexture(gl.TEXTURE_2D, textures[name]);
+                
+                // Fill with a placeholder single pixel until the image loads
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
+                              new Uint8Array([0, 0, 255, 255]));
+            });
+            
+            // Create in-memory canvas to generate textures
+            const textureCanvas = document.createElement('canvas');
+            const ctx = textureCanvas.getContext('2d');
+            textureCanvas.width = 128;
+            textureCanvas.height = 128;
+            
+            // Create cell texture (blue gradient)
+            ctx.fillStyle = '#34495e';
+            ctx.fillRect(0, 0, 128, 128);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(5, 5, 118, 118);
+            updateTexture('cell', textureCanvas);
+            
+            // Create robber texture (red masked figure)
+            ctx.clearRect(0, 0, 128, 128);
+            ctx.fillStyle = '#e74c3c';
+            ctx.beginPath();
+            ctx.arc(64, 64, 40, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'black';
+            // Draw mask shape
+            ctx.fillRect(34, 44, 60, 20);
+            updateTexture('robber', textureCanvas);
+            
+            // Create police texture (blue figure)
+            ctx.clearRect(0, 0, 128, 128);
+            ctx.fillStyle = '#3498db';
+            ctx.beginPath();
+            ctx.arc(64, 64, 40, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'white';
+            // Draw badge shape
+            ctx.beginPath();
+            ctx.arc(64, 64, 15, 0, Math.PI * 2);
+            ctx.fill();
+            updateTexture('police', textureCanvas);
+            
+            // Create safe texture (gold)
+            ctx.clearRect(0, 0, 128, 128);
+            let grd = ctx.createRadialGradient(64, 64, 10, 64, 64, 50);
+            grd.addColorStop(0, '#ffd700');
+            grd.addColorStop(1, '#b8860b');
+            ctx.fillStyle = grd;
+            ctx.beginPath();
+            ctx.arc(64, 64, 40, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(64, 64, 30, 0, Math.PI * 2);
+            ctx.stroke();
+            updateTexture('safe', textureCanvas);
+            
+            // Create horizontal wall texture
+            ctx.clearRect(0, 0, 128, 128);
+            grd = ctx.createLinearGradient(0, 0, 0, 128);
+            grd.addColorStop(0, '#8B4513');
+            grd.addColorStop(1, '#6b3915');
+            ctx.fillStyle = grd;
+            ctx.fillRect(0, 0, 128, 128);
+            // Add wood grain effect
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 128; i += 10) {
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(128, i);
+                ctx.stroke();
+            }
+            updateTexture('wall-h', textureCanvas);
+            
+            // Create vertical wall texture
+            ctx.clearRect(0, 0, 128, 128);
+            grd = ctx.createLinearGradient(0, 0, 128, 0);
+            grd.addColorStop(0, '#8B4513');
+            grd.addColorStop(1, '#6b3915');
+            ctx.fillStyle = grd;
+            ctx.fillRect(0, 0, 128, 128);
+            // Add wood grain effect
+            for (let i = 0; i < 128; i += 10) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, 128);
+                ctx.stroke();
+            }
+            updateTexture('wall-v', textureCanvas);
+        }
+        
+        // Update a texture from a canvas
+        function updateTexture(name, textureCanvas) {
+            gl.bindTexture(gl.TEXTURE_2D, textures[name]);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureCanvas);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+            gl.generateMipmap(gl.TEXTURE_2D);
+        }
+        
+        // Calculate difficulty based on current level
+        function calculateDifficulty() {
+            // Calculate number of police officers (add one every 10 levels)
+            const policeCount = Math.min(Math.floor(currentLevel / 10) + 1, MAX_POLICE);
+            
+            // Calculate wall percentage (add 5% every 5 levels)
+            const wallPercentage = Math.min(
+                BASE_WALL_PERCENTAGE + Math.floor(currentLevel / 5) * WALL_INCREMENT,
+                MAX_WALL_PERCENTAGE
+            );
+            
+            return {
+                policeCount: policeCount,
+                wallPercentage: wallPercentage
+            };
+        }
+        
+        // Reset current level
+        function resetLevel() {
+            gameActive = true;
+            moves = 0;
+            updateMovesCounter();
+            
+            // Reset positions
+            playerPos = { ...generatedLevel.player };
+            policePositions = JSON.parse(JSON.stringify(generatedLevel.police));
+        }
+        
+        // Generated level storage
+        let generatedLevel = null;
+        
+        // Generate a random level
+        function generateRandomLevel() {
+            gameActive = true;
+            moves = 0;
+            updateMovesCounter();
+            levelDisplay.textContent = `Level ${currentLevel}`;
+            
+            // Calculate difficulty parameters based on level
+            const difficulty = calculateDifficulty();
+            policeCountDisplay.textContent = difficulty.policeCount;
+            wallPercentageDisplay.textContent = difficulty.wallPercentage + '%';
+            
+            // Place player in a random position (preferably top)
+            playerPos = {
+                x: Math.floor(Math.random() * GRID_WIDTH),
+                y: Math.floor(Math.random() * 2) // Top 2 rows
+            };
+            
+            // Place safe at the bottom
+            safePos = {
+                x: Math.floor(Math.random() * GRID_WIDTH),
+                y: GRID_HEIGHT - 1 - Math.floor(Math.random() * 2) // Bottom 2 rows
+            };
+            
+            // Place police officers
+            policePositions = [];
+            for (let i = 0; i < difficulty.policeCount; i++) {
+                let validPos = false;
+                let policePosAttempt;
+                
+                // Keep trying until we find a valid position
+                let attempts = 0;
+                while (!validPos && attempts < 50) {
+                    policePosAttempt = {
+                        x: Math.floor(Math.random() * GRID_WIDTH),
+                        y: Math.floor(Math.random() * GRID_HEIGHT)
+                    };
+                    
+                    // Check it doesn't overlap with player, safe, or other police
+                    validPos = true;
+                    if ((policePosAttempt.x === playerPos.x && policePosAttempt.y === playerPos.y) || 
+                        (policePosAttempt.x === safePos.x && policePosAttempt.y === safePos.y)) {
+                        validPos = false;
+                    }
+                    
+                    // Check distance from player (shouldn't be too close)
+                    if (Math.abs(policePosAttempt.x - playerPos.x) + Math.abs(policePosAttempt.y - playerPos.y) < 3) {
+                        validPos = false;
+                    }
+                    
+                    // Check it doesn't overlap with other police
+                    for (const police of policePositions) {
+                        if (police.x === policePosAttempt.x && police.y === policePosAttempt.y) {
+                            validPos = false;
+                            break;
+                        }
+                    }
+                    
+                    attempts++;
+                }
+                
+                if (validPos) {
+                    policePositions.push(policePosAttempt);
+                } else {
+                    // Fallback if we can't find a good position
+                    policePositions.push({
+                        x: (playerPos.x + 2) % GRID_WIDTH,
+                        y: (playerPos.y + 3) % GRID_HEIGHT
+                    });
+                }
+            }
+            
+            // Generate walls based on difficulty
+            walls = [];
+            const totalCells = (GRID_WIDTH - 1) * GRID_HEIGHT + GRID_WIDTH * (GRID_HEIGHT - 1); // Possible wall positions
+            const wallCount = Math.floor(totalCells * difficulty.wallPercentage / 100);
+            
+            for (let i = 0; i < wallCount; i++) {
+                const x = Math.floor(Math.random() * GRID_WIDTH);
+                const y = Math.floor(Math.random() * GRID_HEIGHT);
+                const dir = Math.random() < 0.5 ? 'right' : 'bottom';
+                
+                // Avoid placing walls at grid boundaries
+                if ((dir === 'right' && x === GRID_WIDTH - 1) || 
+                    (dir === 'bottom' && y === GRID_HEIGHT - 1)) {
+                    continue;
+                }
+                
+                // Avoid duplicating walls
+                if (!walls.some(w => w.x === x && w.y === y && w.dir === dir)) {
+                    walls.push({ x, y, dir });
+                }
+            }
+            
+            // Store the generated level for reset functionality
+            generatedLevel = {
+                player: { ...playerPos },
+                police: JSON.parse(JSON.stringify(policePositions)),
+                safe: { ...safePos },
+                walls: JSON.parse(JSON.stringify(walls))
+            };
+        }
+        
+        // Update moves counter
+        function updateMovesCounter() {
+            movesCounter.textContent = moves;
+        }
+        
+        // Handle canvas clicks
+        function handleCanvasClick(event) {
+            if (!gameActive) return;
+            
+            // Get click coordinates relative to canvas
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            
+            // Convert to grid coordinates
+            const gridX = Math.floor(x / (canvas.width / GRID_WIDTH));
+            const gridY = Math.floor(y / (canvas.height / GRID_HEIGHT));
+            
+            // Check if clicked cell is adjacent to player
+            if (isAdjacent(playerPos, {x: gridX, y: gridY})) {
+                // Calculate direction
+                const dx = gridX - playerPos.x;
+                const dy = gridY - playerPos.y;
+                
+                // Check if there's a wall blocking the way
+                if (isWallBlocking(playerPos.x, playerPos.y, dx, dy)) {
+                    // Try to push the wall
+                    if (canPushWall(playerPos.x, playerPos.y, dx, dy)) {
+                        pushWall(playerPos.x, playerPos.y, dx, dy);
+                        movePlayer(gridX, gridY);
+                    }
+                } else {
+                    // No wall, move freely
+                    movePlayer(gridX, gridY);
+                }
+            }
+        }
+        
+        // Move all police officers
+        function movePolice() {
+            for (let i = 0; i < policePositions.length; i++) {
+                const policePos = policePositions[i];
+                
+                // Check if police is adjacent to player
+                if (isAdjacent(policePos, playerPos)) {
+                    // Move towards player
+                    const dx = playerPos.x - policePos.x;
+                    const dy = playerPos.y - policePos.y;
+                    
+                    const newX = policePos.x + (dx !== 0 ? Math.sign(dx) : 0);
+                    const newY = policePos.y + (dy !== 0 ? Math.sign(dy) : 0);
+                    
+                    // Check if movement is blocked by wall
+                    if (!isWallBlocking(policePos.x, policePos.y, Math.sign(dx), Math.sign(dy))) {
+                        policePos.x = newX;
+                        policePos.y = newY;
+                    }
+                } else {
+                    // Move randomly
+                    const directions = [
+                        { dx: 0, dy: -1 }, // up
+                        { dx: 1, dy: 0 },  // right
+                        { dx: 0, dy: 1 },  // down
+                        { dx: -1, dy: 0 }  // left
+                    ];
+                    
+                    // Shuffle directions
+                    for (let i = directions.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [directions[i], directions[j]] = [directions[j], directions[i]];
+                    }
+                    
+                    // Try each direction until a valid move is found
+                    for (const dir of directions) {
+                        const newX = policePos.x + dir.dx;
+                        const newY = policePos.y + dir.dy;
+                        
+                        // Check bounds
+                        if (newX >= 0 && newX < GRID_WIDTH && 
+                            newY >= 0 && newY < GRID_HEIGHT) {
+                            
+                            // Check if movement is blocked by wall
+                            if (!isWallBlocking(policePos.x, policePos.y, dir.dx, dir.dy)) {
+							// Check if new position doesn't overlap with other police
+                                let overlap = false;
+                                for (let j = 0; j < policePositions.length; j++) {
+                                    if (i !== j && policePositions[j].x === newX && policePositions[j].y === newY) {
+                                        overlap = true;
+                                        break;
+                                    }
+                                }
+                                
+                                if (!overlap) {
+                                    // Valid move found
+                                    policePos.x = newX;
+                                    policePos.y = newY;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Check if police caught the player
+                if (policePos.x === playerPos.x && policePos.y === playerPos.y) {
+                    gameOver();
+                    return; // Stop processing other police if player is caught
+                }
+            }
+        }
+        
+        // Game over
+        function gameOver() {
+            gameActive = false;
+            gameOverScreen.classList.add('active');
+        }
+        
+        // Check if two positions are adjacent
+        function isAdjacent(pos1, pos2) {
+            const dx = Math.abs(pos1.x - pos2.x);
+            const dy = Math.abs(pos1.y - pos2.y);
+            return (dx === 1 && dy === 0) || (dx === 0 && dy === 1);
+        }
+        
+        // Check if there's a wall blocking the movement
+        function isWallBlocking(x, y, dx, dy) {
+            // Moving right
+            if (dx === 1 && dy === 0) {
+                return walls.some(w => w.x === x && w.y === y && w.dir === 'right');
+            }
+            // Moving left
+            else if (dx === -1 && dy === 0) {
+                return walls.some(w => w.x === x-1 && w.y === y && w.dir === 'right');
+            }
+            // Moving down
+            else if (dx === 0 && dy === 1) {
+                return walls.some(w => w.x === x && w.y === y && w.dir === 'bottom');
+            }
+            // Moving up
+            else if (dx === 0 && dy === -1) {
+                return walls.some(w => w.x === x && w.y === y-1 && w.dir === 'bottom');
+            }
+           
+            return false;
+        }
+       
+        // Check if a wall can be pushed
+        function canPushWall(x, y, dx, dy) {
+            let wallIndex = -1;
+           
+            // Find the wall
+            if (dx === 1 && dy === 0) {
+                wallIndex = walls.findIndex(w => w.x === x && w.y === y && w.dir === 'right');
+            } else if (dx === -1 && dy === 0) {
+                wallIndex = walls.findIndex(w => w.x === x-1 && w.y === y && w.dir === 'right');
+            } else if (dx === 0 && dy === 1) {
+                wallIndex = walls.findIndex(w => w.x === x && w.y === y && w.dir === 'bottom');
+            } else if (dx === 0 && dy === -1) {
+                wallIndex = walls.findIndex(w => w.x === x && w.y === y-1 && w.dir === 'bottom');
+            }
+           
+            if (wallIndex === -1) return false;
+           
+            const wall = walls[wallIndex];
+           
+            // Check if there's another wall blocking the push
+            if (wall.dir === 'right') {
+                // Check if pushing the wall would put it out of bounds
+                if (wall.x + dx < 0 || wall.x + dx >= GRID_WIDTH - 1) return false;
+               
+                // Check for another wall in the destination
+                return !walls.some(w => 
+                    w.x === wall.x + dx && 
+                    w.y === wall.y && 
+                    w.dir === 'right'
+                );
+            } else { // bottom wall
+                // Check if pushing the wall would put it out of bounds
+                if (wall.y + dy < 0 || wall.y + dy >= GRID_HEIGHT - 1) return false;
+               
+                // Check for another wall in the destination
+                return !walls.some(w => 
+                    w.x === wall.x && 
+                    w.y === wall.y + dy && 
+                    w.dir === 'bottom'
+                );
+            }
+        }
+       
+        // Push a wall
+        function pushWall(x, y, dx, dy) {
+            let wallIndex = -1;
+           
+            // Find the wall
+            if (dx === 1 && dy === 0) {
+                wallIndex = walls.findIndex(w => w.x === x && w.y === y && w.dir === 'right');
+            } else if (dx === -1 && dy === 0) {
+                wallIndex = walls.findIndex(w => w.x === x-1 && w.y === y && w.dir === 'right');
+            } else if (dx === 0 && dy === 1) {
+                wallIndex = walls.findIndex(w => w.x === x && w.y === y && w.dir === 'bottom');
+            } else if (dx === 0 && dy === -1) {
+                wallIndex = walls.findIndex(w => w.x === x && w.y === y-1 && w.dir === 'bottom');
+            }
+           
+            if (wallIndex === -1) return;
+           
+            // Update wall position
+            walls[wallIndex].x += dx;
+            walls[wallIndex].y += dy;
+        }
+       
+        // Move the player
+        function movePlayer(x, y) {
+            playerPos.x = x;
+            playerPos.y = y;
+            moves++;
+            updateMovesCounter();
+           
+            // Check if player reached the safe
+            if (x === safePos.x && y === safePos.y) {
+                gameActive = false;
+                setTimeout(() => {
+                    victoryScreen.classList.add('active');
+                }, 300);
+                return;
+            }
+           
+            // Move police after player's move
+            setTimeout(() => {
+                movePolice();
+            }, 300);
+        }
+       
+        // Draw the scene
+        function render(now) {
+            now *= 0.001;  // Convert to seconds
+            const deltaTime = now - lastRenderTime;
+            lastRenderTime = now;
+           
+            // Resize canvas to ensure it matches the display size
+            resizeCanvas();
+           
+            // Clear background
+            gl.clearColor(0.2, 0.2, 0.3, 1.0);
+            gl.clearDepth(1.0);
+            gl.enable(gl.DEPTH_TEST);
+            gl.depthFunc(gl.LEQUAL);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+           
+            // Create projection matrix (orthographic for 2D)
+            const projectionMatrix = mat4.create();
+            mat4.ortho(projectionMatrix, 
+                      -1.0, 1.0,    // left, right
+                      -1.0, 1.0,    // bottom, top
+                      0.1, 100.0);  // near, far
+                      
+            // Set shader program
+            gl.useProgram(programInfo.program);
+           
+            // Draw grid cells
+            drawGrid(projectionMatrix);
+           
+            // Draw game elements
+            drawGameElements(projectionMatrix);
+           
+            // Request another frame
+            requestAnimationFrame(render);
+        }
+       
+        // Resize canvas to match display size
+        function resizeCanvas() {
+            const displayWidth = canvas.clientWidth;
+            const displayHeight = canvas.clientHeight;
+           
+            if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
+                canvas.width = displayWidth;
+                canvas.height = displayHeight;
+                gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+            }
+        }
+       
+        // Draw the grid
+        function drawGrid(projectionMatrix) {
+            const cellWidth = 2.0 / GRID_WIDTH;
+            const cellHeight = 2.0 / GRID_HEIGHT;
+           
+            // Set up the buffers
+            {
+                const numComponents = 2;  // x, y
+                const type = gl.FLOAT;
+                const normalize = false;
+                const stride = 0;
+                const offset = 0;
+                gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
+                gl.vertexAttribPointer(
+                    programInfo.attribLocations.vertexPosition,
+                    numComponents, type, normalize, stride, offset);
+                gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
+            }
+           
+            // Set up texture coordinates
+            {
+                const numComponents = 2;
+                const type = gl.FLOAT;
+                const normalize = false;
+                const stride = 0;
+                const offset = 0;
+                gl.bindBuffer(gl.ARRAY_BUFFER, buffers.textureCoord);
+                gl.vertexAttribPointer(
+                    programInfo.attribLocations.textureCoord,
+                    numComponents, type, normalize, stride, offset);
+                gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord);
+            }
+           
+            // Set uniforms for projection
+            gl.uniformMatrix4fv(
+                programInfo.uniformLocations.projectionMatrix,
+                false,
+                projectionMatrix);
+               
+            // Draw each cell
+            for (let y = 0; y < GRID_HEIGHT; y++) {
+                for (let x = 0; x < GRID_WIDTH; x++) {
+                    const modelViewMatrix = mat4.create();
+                   
+                    // Calculate position (convert from grid to clip space)
+                    const posX = -1.0 + cellWidth * (x + 0.5);
+                    const posY = 1.0 - cellHeight * (y + 0.5);
+                   
+                    mat4.translate(modelViewMatrix, modelViewMatrix, [posX, posY, -5.0]);
+                    mat4.scale(modelViewMatrix, modelViewMatrix, [cellWidth * 0.45, cellHeight * 0.45, 1.0]);
+                   
+                    // Set the model view matrix
+                    gl.uniformMatrix4fv(
+                        programInfo.uniformLocations.modelViewMatrix,
+                        false,
+                        modelViewMatrix);
+                       
+                    // Use cell texture
+                    gl.activeTexture(gl.TEXTURE0);
+                    gl.bindTexture(gl.TEXTURE_2D, textures.cell);
+                    gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
+                    gl.uniform1i(programInfo.uniformLocations.uUseTexture, true);
+                   
+                    // Draw the cell
+                    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                }
+            }
+        }
+       
+        // Draw game elements (player, police, safe, walls)
+        function drawGameElements(projectionMatrix) {
+            const cellWidth = 2.0 / GRID_WIDTH;
+            const cellHeight = 2.0 / GRID_HEIGHT;
+           
+            // Set uniforms for projection
+            gl.uniformMatrix4fv(
+                programInfo.uniformLocations.projectionMatrix,
+                false,
+                projectionMatrix);
+               
+            // Draw player
+            {
+                const modelViewMatrix = mat4.create();
+                const posX = -1.0 + cellWidth * (playerPos.x + 0.5);
+                const posY = 1.0 - cellHeight * (playerPos.y + 0.5);
+               
+                mat4.translate(modelViewMatrix, modelViewMatrix, [posX, posY, -4.5]);
+                mat4.scale(modelViewMatrix, modelViewMatrix, [cellWidth * 0.35, cellHeight * 0.35, 1.0]);
+               
+                gl.uniformMatrix4fv(
+                    programInfo.uniformLocations.modelViewMatrix,
+                    false,
+                    modelViewMatrix);
+                   
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, textures.robber);
+                gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
+                gl.uniform1i(programInfo.uniformLocations.uUseTexture, true);
+               
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            }
+           
+            // Draw police officers
+            for (const policePos of policePositions) {
+                const modelViewMatrix = mat4.create();
+                const posX = -1.0 + cellWidth * (policePos.x + 0.5);
+                const posY = 1.0 - cellHeight * (policePos.y + 0.5);
+               
+                mat4.translate(modelViewMatrix, modelViewMatrix, [posX, posY, -4.5]);
+                mat4.scale(modelViewMatrix, modelViewMatrix, [cellWidth * 0.35, cellHeight * 0.35, 1.0]);
+               
+                gl.uniformMatrix4fv(
+                    programInfo.uniformLocations.modelViewMatrix,
+                    false,
+                    modelViewMatrix);
+                   
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, textures.police);
+                gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
+                gl.uniform1i(programInfo.uniformLocations.uUseTexture, true);
+               
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            }
+           
+            // Draw safe
+            {
+                const modelViewMatrix = mat4.create();
+                const posX = -1.0 + cellWidth * (safePos.x + 0.5);
+                const posY = 1.0 - cellHeight * (safePos.y + 0.5);
+               
+                mat4.translate(modelViewMatrix, modelViewMatrix, [posX, posY, -4.8]);
+                mat4.scale(modelViewMatrix, modelViewMatrix, [cellWidth * 0.35, cellHeight * 0.35, 1.0]);
+               
+                gl.uniformMatrix4fv(
+                    programInfo.uniformLocations.modelViewMatrix,
+                    false,
+                    modelViewMatrix);
+                   
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, textures.safe);
+                gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
+                gl.uniform1i(programInfo.uniformLocations.uUseTexture, true);
+               
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            }
+           
+            // Draw walls
+            walls.forEach(wall => {
+                const modelViewMatrix = mat4.create();
+                let posX, posY;
+               
+                if (wall.dir === 'right') {
+                    posX = -1.0 + cellWidth * (wall.x + 1);
+                    posY = 1.0 - cellHeight * (wall.y + 0.5);
+                   
+                    mat4.translate(modelViewMatrix, modelViewMatrix, [posX, posY, -4.0]);
+                    mat4.scale(modelViewMatrix, modelViewMatrix, [cellWidth * 0.07, cellHeight * 0.4, 1.0]);
+                   
+                    gl.uniformMatrix4fv(
+                        programInfo.uniformLocations.modelViewMatrix,
+                        false,
+                        modelViewMatrix);
+                       
+                    gl.activeTexture(gl.TEXTURE0);
+                    gl.bindTexture(gl.TEXTURE_2D, textures['wall-v']);
+                    gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
+                    gl.uniform1i(programInfo.uniformLocations.uUseTexture, true);
+                } else { // bottom wall
+                    posX = -1.0 + cellWidth * (wall.x + 0.5);
+                    posY = 1.0 - cellHeight * (wall.y + 1);
+                   
+                    mat4.translate(modelViewMatrix, modelViewMatrix, [posX, posY, -4.0]);
+                    mat4.scale(modelViewMatrix, modelViewMatrix, [cellWidth * 0.4, cellHeight * 0.07, 1.0]);
+                   
+                    gl.uniformMatrix4fv(
+                        programInfo.uniformLocations.modelViewMatrix,
+                        false,
+                        modelViewMatrix);
+                       
+                    gl.activeTexture(gl.TEXTURE0);
+                    gl.bindTexture(gl.TEXTURE_2D, textures['wall-h']);
+                    gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
+                    gl.uniform1i(programInfo.uniformLocations.uUseTexture, true);
+                }
+               
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            });
+        }
+       
+        // Math utility functions for WebGL
+        // Simple matrix utility functions (implementation of gl-matrix library)
+        const mat4 = {
+            create: function() {
+                return new Float32Array([
+                    1, 0, 0, 0,
+                    0, 1, 0, 0,
+                    0, 0, 1, 0,
+                    0, 0, 0, 1
+                ]);
+            },
+           
+            translate: function(out, a, v) {
+                let x = v[0], y = v[1], z = v[2];
+                let a00, a01, a02, a03;
+                let a10, a11, a12, a13;
+                let a20, a21, a22, a23;
+               
+                if (a === out) {
+                    out[12] = a[0] * x + a[4] * y + a[8] * z + a[12];
+                    out[13] = a[1] * x + a[5] * y + a[9] * z + a[13];
+                    out[14] = a[2] * x + a[6] * y + a[10] * z + a[14];
+                    out[15] = a[3] * x + a[7] * y + a[11] * z + a[15];
+                } else {
+                    a00 = a[0]; a01 = a[1]; a02 = a[2]; a03 = a[3];
+                    a10 = a[4]; a11 = a[5]; a12 = a[6]; a13 = a[7];
+                    a20 = a[8]; a21 = a[9]; a22 = a[10]; a23 = a[11];
+                   
+                    out[0] = a00; out[1] = a01; out[2] = a02; out[3] = a03;
+                    out[4] = a10; out[5] = a11; out[6] = a12; out[7] = a13;
+                    out[8] = a20; out[9] = a21; out[10] = a22; out[11] = a23;
+                   
+                    out[12] = a00 * x + a10 * y + a20 * z + a[12];
+                    out[13] = a01 * x + a11 * y + a21 * z + a[13];
+                    out[14] = a02 * x + a12 * y + a22 * z + a[14];
+                    out[15] = a03 * x + a13 * y + a23 * z + a[15];
+                }
+               
+                return out;
+            },
+           
+            scale: function(out, a, v) {
+                let x = v[0], y = v[1], z = v[2];
+               
+                out[0] = a[0] * x;
+                out[1] = a[1] * x;
+                out[2] = a[2] * x;
+                out[3] = a[3] * x;
+                out[4] = a[4] * y;
+                out[5] = a[5] * y;
+                out[6] = a[6] * y;
+                out[7] = a[7] * y;
+                out[8] = a[8] * z;
+                out[9] = a[9] * z;
+                out[10] = a[10] * z;
+                out[11] = a[11] * z;
+                out[12] = a[12];
+                out[13] = a[13];
+                out[14] = a[14];
+                out[15] = a[15];
+               
+                return out;
+            },
+           
+            ortho: function(out, left, right, bottom, top, near, far) {
+                const lr = 1 / (left - right);
+                const bt = 1 / (bottom - top);
+                const nf = 1 / (near - far);
+               
+                out[0] = -2 * lr;
+                out[1] = 0;
+                out[2] = 0;
+                out[3] = 0;
+                out[4] = 0;
+                out[5] = -2 * bt;
+                out[6] = 0;
+                out[7] = 0;
+                out[8] = 0;
+                out[9] = 0;
+                out[10] = 2 * nf;
+                out[11] = 0;
+                out[12] = (left + right) * lr;
+                out[13] = (top + bottom) * bt;
+                out[14] = (far + near) * nf;
+                out[15] = 1;
+               
+                return out;
+            }
+        };
+       
+        // Start the game
+        initGame();
+    </script>
 </body>
 </html>
